@@ -1,0 +1,265 @@
+//----------------------------------------------------------------------------
+//----------------------------------------------------------------------------
+//  MAKE CELLS
+//----------------------------------------------------------------------------
+//----------------------------------------------------------------------------
+objectvar rand
+seed = 8746  
+rand = new Random(seed)
+
+
+ExNoise = 0.02	// Noise in Vm, in miliAmps
+InhNoise = 0.010 
+
+Thr_IAF_noise = 0	// Noise around threshold for firing in IAF's
+
+spkgenmode_INPUT = 0
+
+
+// EX CELLS------------------------------------------------------------------
+
+objectvar Ex[nEx]                               // create an array of object variables
+dummy = rand.normal(ThrConst_ExIAF, abs(ThrConst_ExIAF)*Thr_IAF_noise)         //setup to use r.repick (muuuch quicker)
+// Creates the INPUT
+for(i=0; i<ExINPUT; i=i+1) {
+        Ex[i] = new INPUTSoma()
+        Ex[i].soma.imax_NOISE = ExNoise                         // 0.01
+        Ex[i].soma.SetCa_ExIAF = SetCaEx
+		//Ex[i].soma.Thr_ExIAF = rand.repick()		// Threshold for firing generates random number from 4 lines above distribution (normal)
+   ///// OBJECT FOR PRESYNAPTIC SYNAPTIC MECHANISM /////
+
+}
+// Creates THE Ex cell
+for(i=ExINPUT; i<nEx; i=i+1) {
+        Ex[i] = new ExSoma()
+        Ex[i].soma.imax_NOISE = ExNoise                         // 0.01
+        Ex[i].soma.SetCa_ExIAF = SetCaEx
+		//Ex[i].soma.Thr_ExIAF = rand.repick()		// Threshold for firing generates random number from 4 lines above distribution (normal)
+   ///// OBJECT FOR PRESYNAPTIC SYNAPTIC MECHANISM /////
+
+}
+// ADD INPUT MODEL for ExINPUT cells
+dummy = rand.normal(10,1)
+for(i=0; i<ExINPUT; i=i+1) {
+      access Ex[i].soma
+      insert INPUT
+      Ex[i].soma.start_INPUT = 10 //rand.repick()	// Time in which pulse will be given
+      Ex[i].soma.burst_len_INPUT = 1
+      Ex[i].soma.fast_invl_INPUT = 1
+      Ex[i].soma.slow_invl_INPUT = 50
+      Ex[i].soma.end_INPUT = 0		//Ex[i].soma.start_INPUT + 5//+ IN[i].soma.slow_invl_INPUT
+      for(j=0;j<10;j=j+1) {
+         Ex[i].soma.on_times_INPUT[j] = 9e4
+      }
+}
+// TO PREVENT INPUT CELL FROM FIRING MORE THAN ONCE (because extra dend compartment buffers the current)
+//print "--Changing length of input cell dendrite"
+//Ex[0].dend.L = 1 
+
+
+
+// INH CELLS------------------------------------------------------------------
+
+objectvar Inh[nInh]                             // create an array of object variables
+dummy = rand.normal(ThrConst_InhIAF,abs(ThrConst_InhIAF)*Thr_IAF_noise)
+for(i=0; i<nInh; i=i+1) {
+   Inh[i] = new InhSoma()                                                  // create RE cells from template
+   Inh[i].soma.imax_NOISE = InhNoise                               // 0.01
+   Inh[i].soma.SetCa_InhIAF = SetCaInh
+   Inh[i].soma.Thr_InhIAF = rand.repick()
+
+
+        ///// OBJECT FOR PRESYNAPTIC SYNAPTIC MECHANISM /////
+
+}
+// ADD INPUT MODEL for InhINPUT cells
+dummy = rand.normal(10,1)
+for(i=0; i<InhINPUT; i=i+1) {
+      access Inh[i].soma
+      insert INPUT
+      Inh[i].soma.start_INPUT = rand.repick()
+      //Inh[i].soma.start_INPUT = 10
+      Inh[i].soma.burst_len_INPUT = 1
+      Inh[i].soma.fast_invl_INPUT = 1
+      Inh[i].soma.slow_invl_INPUT = 50
+      Inh[i].soma.end_INPUT = Inh[i].soma.start_INPUT + 5	//+ IN[i].soma.slow_invl_INPUT
+      for(j=0;j<10;j=j+1) {
+         Inh[i].soma.on_times_INPUT[j] = 9e4
+      }
+}
+
+
+
+//----------------------------------------------------------------------------
+//----------------------------------------------------------------------------
+//  SYNAPTOGENESIS
+//----------------------------------------------------------------------------
+//----------------------------------------------------------------------------
+
+//objectvar rand
+//rand = new Random(13)
+
+objectvar  sInhEx[nEx][nInh_Ex] // 1=Postsynaptic cell; 2=synapse number
+objectvar  sExEx[nEx][nEx_Ex]
+objectvar  sExInh[nInh][nEx_Inh]
+
+print "Making EXCITATORY synapses *ONTO* EXCITATORY neurons (ExEx)"
+//Ex->Ex
+//CONNECTS ALL INPUTS TO THE *SAME SINGLE* POSTSYNAPTIC CELL
+for(k=0; k<ExINPUT; k=k+1) {	// My innovation: RUNS THROUGH ALL 'pre' INPUTS, 'k' is the input
+	for(i=ExINPUT; i<nEx; i=i+1) {	// Runs through all POSTSYNAPTIC EX cells, 'i' is the postsynaptic cell
+
+			j = k	// Only connect 1 input to Ex
+
+			pre = k				// PRESYNAPTIC CELL
+								// 'i' is the POSTSYNAPTIC CELL
+      
+			sExEx[i][j] = new EPlasSyn()	// Matrix that will hold the synaptic weights.
+			Ex[i].dend sExEx[i][j].loc(0.5)	// Synapse ONTO ExSOMA dendrite
+			//Ex[i].soma sExEx[i][j].loc(0.5)	// Prepares soma of Ex[i] to receive a synapse in specific location
+			sExEx[i][j].precell = pre			// Makes the above synapse to come from 'pre' cell
+
+			//SET PRESYNAPTIC POINTERS
+			setpointer sExEx[i][j].ampa, Ex[pre].soma.ampa_EPlasSom
+			setpointer sExEx[i][j].nmda, Ex[pre].soma.nmda_EPlasSom
+			setpointer sExEx[i][j].lastprespike, Ex[pre].soma.lastspike_EPlasSom
+			setpointer sExEx[i][j].PreAvgCa, Ex[pre].soma.AvgCa_ExIAF
+
+			//SET POSTSYNAPTIC POINTERS
+			setpointer sExEx[i][j].ScaleFactor, Ex[i].soma.ScaleFactor_ExIAF
+			setpointer sExEx[i][j].Induction, Ex[i].soma.Induction_ExIAF
+			setpointer sExEx[i][j].AMPAMAX, AmpaMaxExEx
+			setpointer sExEx[i][j].lastpostspike, Ex[i].soma.lastspike_EPlasSom
+			setpointer sExEx[i][j].postB, Ex[i].soma.B_ExIAF
+		//}
+	}
+}
+
+print "Making INHIBITORY synapses *ONTO* EXCITATORY neurons (InhEx)"
+//Inh->Ex
+for(k=0; k<nInh; k=k+1) {				// Runs through all Inh PRESYNAPTIC CELLS
+	for(i=ExINPUT; i<nEx; i=i+1) {		// Runs through all Ex POSTSYNAPTIC CELLS
+		//for(j=0;j<nInh_Ex;j=j+1) {		// Runs through all synapses
+	
+			j = k	// Connect 1 Inhibitory neuron to only1
+
+			pre = k
+			
+			sInhEx[i][j] = new IPlasSyn()
+			//Ex[i].dend sInhEx[i][j].loc(0)
+			Ex[i].soma sInhEx[i][j].loc(0.5)	// Puts synapse in POSTSYNAPTIC Ex cell
+			sInhEx[i][j].precell = pre			// Links above synapse with presynaptic cell
+           
+		   
+		   
+			//SET PRESYNAPTIC POINTERS
+			setpointer sInhEx[i][j].gaba, Inh[pre].soma.gaba_IPlasSom
+			setpointer sInhEx[i][j].lastprespike, Inh[pre].soma.lastspike_IPlasSom
+			setpointer sInhEx[i][j].PreAvgCa, Inh[pre].soma.AvgCa_InhIAF
+			//SET POSTSYNAPTIC POINTERS
+			setpointer sInhEx[i][j].ScaleFactor, Ex[i].soma.ScaleFactor_ExIAF
+	        setpointer sInhEx[i][j].Induction, Ex[i].soma.Induction_ExIAF
+	        setpointer sInhEx[i][j].GABAMAX, GabaMax
+	        setpointer sInhEx[i][j].lastpostspike, Ex[i].soma.lastspike_EPlasSom
+		//}
+	}
+}
+
+
+// Ex->Inh
+print "Making EXCITATORY synapses *ONTO* INHIBITORY neurons (ExInh), from ALL INPUTS"
+
+double ExInhPost[nInh][nEx_Inh]
+	for(i=0; i<nInh; i=i+1) {		// Runs through all POSTSYNATIC Inh cells
+		for(j=0;j<nEx_Inh;j=j+1) {	// Runs through all synapses
+		
+		pre = j			// Input connects to SINGLE Inh cell. Ex[0]->Inh[0]; Ex[1]->Inh[1],...
+		
+ 
+			post = i
+
+			ExInhPost[i][j] = post
+			sExInh[i][j] = new EPlasSyn()
+			Inh[post].soma sExInh[i][j].loc(0.5)
+			sExInh[i][j].precell = pre
+			//SET PRESYNAPTIC POINTERS
+			setpointer sExInh[i][j].ampa, Ex[pre].soma.ampa_EtoIPlasSom
+			setpointer sExInh[i][j].nmda, Ex[pre].soma.nmda_EtoIPlasSom
+			setpointer sExInh[i][j].lastprespike, Ex[pre].soma.lastspike_EtoIPlasSom
+			setpointer sExInh[i][j].PreAvgCa, Ex[pre].soma.AvgCa_ExIAF
+
+			//SET POSTSYNAPTIC POINTERS
+			setpointer sExInh[i][j].ScaleFactor, Inh[post].soma.ScaleFactor_InhIAF
+			setpointer sExInh[i][j].Induction, Inh[post].soma.Induction_InhIAF
+			setpointer sExInh[i][j].AMPAMAX, AmpaMaxExInh
+			setpointer sExInh[i][j].lastpostspike, Inh[post].soma.lastspike_IPlasSom
+			setpointer sExInh[i][j].postB, Inh[post].soma.B_InhIAF
+		}
+	}
+//}
+
+
+//----------------------------------------------------------------------------
+//  SET INITIAL SYNAPTIC WEIGHTS AND DELAYS
+//----------------------------------------------------------------------------
+
+
+
+sdW = 0.00  //0.001 this is really variance of synaptic weights
+//sdW=0.00000005
+
+
+///// **INITIAL** SYNAPTIC WEIGHTS /////
+proc CHANGE_W() {
+
+   WEx_Ex = totEx_Ex/nEx_Ex
+   avgW = WEx_Ex
+   Wmin=avgW/50
+
+   print "SETTING Ex SYNAPSES ONTO EXCITATORY NEURONS"
+   W = rand.normal(avgW,avgW*sdW)			//setup to use r.repick (muuuch quicker   T: lollll)
+   //W = rand.normal(avgW,sdW)				//setup to use r.repick (muuuch quicker)
+   
+	for(i=ExINPUT; i<nEx; i=i+1) {		// ALL POSTSYNAPTIC Ex CELLS (doesn't start at 0 because INPUT has no synapses ONTO it!)
+		for(j=0;j<nEx_Ex;j=j+1) {
+			W = rand.repick()
+			if (W<=Wmin) { W=Wmin
+			} else if (W>=AmpaMaxExEx) {W=AmpaMaxExEx}
+			sExEx[i][j].gmaxAMPA = W
+			sExEx[i][j].gmaxNMDA = AMPANMDARATIO_EPlasSyn*sExEx[i][j].gmaxAMPA
+		}                                //end nEx_Ex
+	}// end nEx
+   
+	print "SETTING Inh SYNAPSES ONTO EXCITATORY NEURONS"
+	// Delays for Inh->Ex Synapses
+	WInh_Ex  = totInh_Ex/nInh_Ex
+	avgW = WInh_Ex
+	Wmin=avgW/50
+	W = rand.normal(avgW,sdW*avgW)
+	for(i=ExINPUT; i<nEx; i=i+1) {		// ALL POSTSYNAPTIC Ex CELLS (doesn't start at 0 because INPUT has no synapses ONTO it!)
+		for(j=0;j<nInh_Ex;j=j+1) {
+			W = rand.repick()
+			if (W<=Wmin) W=Wmin           //W=Wmin
+			sInhEx[i][j].gmaxGABA = W
+        }                               //end nInh_Ex
+    }                                                   // end nEx
+
+
+        //sdW=0.0000005
+
+	print "SETTING Ex SYNAPSES ONTO INHIBITORY NEURONS"
+	// Delays for In->Inh and Ex->Inh Synapses
+    WEx_Inh = totEx_Inh/nEx_Inh
+    avgW = WEx_Inh
+    Wmin=avgW/50
+    for(i=0; i<nInh; i=i+1) {
+		W = rand.normal(avgW,sdW*avgW)
+		for(j=0;j<nEx_Inh;j=j+1) {
+			W = rand.repick()
+			if (W<Wmin) {W=Wmin               // Wmin
+			} else if (W>=AmpaMaxExInh) {W=AmpaMaxExInh}
+			sExInh[i][j].gmaxAMPA = W
+			sExInh[i][j].gmaxNMDA = AMPANMDARATIO_EPlasSyn*sExInh[i][j].gmaxAMPA
+		}                               //end nEx_Inh
+	}                                                                       // end nInh
+}                                                                               // end CHANGEW()

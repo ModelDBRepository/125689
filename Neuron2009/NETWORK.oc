@@ -1,0 +1,214 @@
+//----------------------------------------------------------------------------
+//  load define general NEURON menus
+//----------------------------------------------------------------------------
+
+xopen("$(NEURONHOME)/lib/hoc/noload.hoc") // avoid time to search with load_proc
+//nrnmainmenu()                                                                           // create main menu
+//nrncontrolmenu()                                                                        // crate control menu
+
+//----------------------------------------------------------------------------
+//  load TEMPLATE files
+//----------------------------------------------------------------------------
+
+xopen("./cellsIAF.template")                    // load template for RE cell
+
+//----------------------------------------------------------------------------
+//  define basic NEURON and RUN parameters
+//----------------------------------------------------------------------------
+
+dt=0.05		
+tstop = 25           
+runStopAt = tstop
+steps_per_ms = 10
+celsius = 36
+v_init = -60
+trial = 1                                                                       // dummy variable used in PARAM.oc
+
+
+
+//----------------------------------------------------------------------------
+//  NETWORK PARAMETERS
+//----------------------------------------------------------------------------
+
+// NUMBER OF CELLS
+nEx = 21                      
+nInh = 10                   
+
+ExINPUT = 20			// cutoff so only some Ex cells receive input
+ExINPUT_block_size = 1	// nr of inputs that will be increasingly firing till ExINPUT
+ExINPUT_end = 20
+
+InhINPUT = 0         
+
+// NUMBER OF SYNAPSES onto post
+nEx_Ex  = ExINPUT              
+nEx_Inh = ExINPUT                
+nInh_Ex = nInh               
+
+// TOTAL SYNAPTIC INPUT FOR INITIAL CONDITIONS (AVERAGE)
+//print "Dividing total synaptic strength onto Ex neuron by number of input fibers"
+totEx_Ex        = 0.000     // Changed before run in synspace.oc  
+totEx_Inh       = 0.008				    
+totInh_Ex       = 0.000		// Changed before run in synspace.oc		
+
+
+AmpaMaxExEx  = 0.00         
+AmpaMaxExInh = 0.00         
+GabaMax      = 0.00          
+AMPANMDARATIO_EPlasSyn = 0 
+
+
+gainLTP_EPlasSyn = 0.005           
+gainLTD_EPlasSyn = 0.005         
+tauLTP_EPlasSyn=10
+tauLTD_EPlasSyn=20
+
+gainLTP_IPlasSyn = 0.01           
+gainLTD_IPlasSyn = 0.01        
+tauLTP_IPlasSyn=20
+tauLTD_IPlasSyn=20
+
+//TARGET 'Ca' LEVELS//
+SetCaEx = 1
+SetCaInh = 1
+
+GainConst_ExIAF = 0.1     // 0.1	Learning rate (ExIAF.mod)
+GainConst_InhIAF = 0.1    // 0.1
+//----------------------------------------------------------------------------
+//  MAKE CELLS andd SYNAPTOGENESIS
+//----------------------------------------------------------------------------
+
+xopen("./SYNAPTOGENESIS.oc")
+
+
+CHANGE_W()	// Sets INITIAL synaptic weights
+
+
+
+//----------------------------------------------------------------------------
+//  FILES
+//----------------------------------------------------------------------------
+
+xopen("FILES.oc")
+
+	
+objectvar fileV	// for some reason this has to stay out of the IF statment...
+if (WRITE_VOLTAGE_FILE) {	
+	fileV = new File()
+	fileV.wopen("voltage.dat")
+}
+
+//----------------------------------------------------------------------------
+//  GRAPHICS
+//----------------------------------------------------------------------------
+xopen("./GRAPHICS.oc")
+//xopen("GRAPHICSSMALL.oc")
+
+// I will have a bunch of 0 and 1's printed now
+
+if (GRAPHICS) {
+
+//	xopen("graph_wnds.ses")
+print "Start GRAPHICS (network.oc)\n"
+
+    addgraph("Ex[0].soma.v", -80,500, 555,0,400,150)	// -80 = ystart coordinates; 300 = yend coordinates
+    strdef dummystr
+    for (i=1;i<nEx;i=i+1) {
+
+
+	    sprint(dummystr,"Ex[%d].soma.v+%d*20",i,i)
+            color=i%5 + 2
+            addline(0,dummystr,color)
+    }
+
+
+    addgraph("Inh[0].soma.v",-80,300, 555,260,400,150)
+    for (i=1;i<nInh;i=i+1) {
+            sprint(dummystr,"Inh[%d].soma.v+%d*20",i,i)
+            color=i%5 + 2
+            addline(1,dummystr,color)
+    }
+
+
+
+}  // end if (GRAPHICS)
+
+
+//----------------------------------------------------------------------------
+//  RUN-TIME PROCESSES
+//----------------------------------------------------------------------------
+objref v_trace
+v_trace = new Vector(tstop/dt) // Array that will hold the voltage, so that slope can be computed without needing to plot
+double Exflag[nEx]
+double Inhflag[nInh]
+proc init() {
+ for (i=0;i<nEx;i=i+1)  { 
+ //i = 1
+ Exflag[i] = 1 
+ }
+  for (i=0;i<nInh;i=i+1) { Inhflag[i] = 1 }
+
+  tstop_ExIAF = tstop
+  tstop_InhIAF = tstop
+
+  finitialize(v_init)
+  fcurrent()
+}
+
+
+proc advance() {
+
+	// To compute slope the voltage trace needs to be stored in a VECTOR
+	if (COMPUTE_SLOPE) {
+		//v_trace.x[t/dt] = Ex[ExINPUT].soma.v
+		v_trace.x[t/dt] = Ex[ExINPUT].soma.v
+	}
+
+	if (WRITE_RASTER_FILE) {
+        //FIND CELLS THAT SPIKED, finds the offset of spike (gON)
+        for (i=0;i<nEx;i=i+1) {
+                if (Exflag[i]) {
+                if (Ex[i].soma.gON_ExIAF == 1) {Exflag[i] = 0}    //reset flag to 0
+                } else {
+                if (Ex[i].soma.gON_ExIAF == 0) {
+                        Exflag[i] = 1
+                                //print"Ex=",i,">>>>>",t,"ms"
+                                //if (FILE) {fraster.printf(" %4d %4d %5.3g\n",trial,i,t) }
+                                fraster.printf(" %4d %4d %5.3g\n",trial,i,t)
+                }
+                }
+        }
+        for (i=0;i<nInh;i=i+1) {
+                if (Inhflag[i]) {
+                if (Inh[i].soma.gON_InhIAF == 1) {Inhflag[i] = 0}         //reset flag to 0
+                } else {
+                if (Inh[i].soma.gON_InhIAF == 0) {
+                        Inhflag[i] = 1
+                                //print"Inh=",i,">>>>>",t,"ms"
+                                //if (FILE) {fraster.printf(" %4d %4d %5.3g\n",trial,nEx+i,t) }
+                                fraster.printf(" %4d %4d %5.3g\n",trial,nEx+i,t)
+                }
+                }
+        }
+		}
+
+		if (WRITE_VOLTAGE_FILE) {
+
+//			if (t%1<dt/2 || t%1>1-dt/2) {
+//				for (i=0;i<nEx;i=i+1) {
+//					fileV.printf(" %4d %5.3g %5.3g\n",trial,Ex[i].soma.v,t)
+//				}
+//				for (i=0;i<nInh;i=i+1) {
+//					fileV.printf(" %4d %5.3g %5.3g\n",trial,Inh[i].soma.v,t)
+//				}
+				// Writes only for Ex Cell, all time steps!!
+				fileV.printf("%5.3g\t%4.4g\n", Ex[ExINPUT].soma.v, t)
+
+//			}
+		}
+
+
+
+        /////////////////////////// UPDATE MOD FILES //////////////////////////////
+        fadvance()
+}                                               // end advance()

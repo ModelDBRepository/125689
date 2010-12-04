@@ -1,0 +1,274 @@
+objectvar g[10]                 // max 10 graphs
+ngraph = 0
+proc addgraph() { local ii      // define subroutine to add a new graph
+        ngraph = ngraph+1
+        ii = ngraph-1
+        g[ii] = new Graph(0)	// With 0 argument will NOT map window to screen (but .view will!)
+        g[ii].size(0,tstop,$2,$3) // $2 = ystart coordinates; $3 = yend coordinates
+	g[ii].view(0,$2,tstop,$3, $4,$5,$6,$7)
+        g[ii].xaxis(0)
+        g[ii].yaxis()
+        g[ii].addvar($s1,1,1)
+        g[ii].family(0)         // 0/1=nooverlay/overlay lines
+        g[ii].save_name("graphList[0].")
+        graphList[0].append(g[ii])
+}
+
+proc addline() {
+        g[$1].addexpr($s2,$3,1)
+}
+
+////////////////////////////////////////////////////////////////////////////////////
+////////////////////   TRIAL PLOTS  //////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////
+
+objectvar   plottrial
+proc initPlotTrial() {
+        plottrial = new Graph()
+        plottrial.size(0,$1,-2,10)
+        plottrial.xaxis()
+        plottrial.yaxis()
+        plottrial.beginline(0,0)
+}
+proc PlotTrial() {
+        plottrial.mark($1,$2,$s3,$4,$5,1)
+        plottrial.flush()
+}
+
+
+////////////////////////////////////////////////////////////////////////////////////
+////////////////////   CONNECTIVITY   //////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////
+
+objectvar       plotconnecEx
+connecEECount = 0                                                       //counts # of times connecEE was called
+connecEEminW  = 0
+connecEEmaxW  = AmpaMaxExEx
+double baseweights[nEx][nEx_Ex]
+
+ncolor=9
+objref sq[ncolor], SQ[ncolor], tri[ncolor], TRI[ncolor], oh[ncolor], OH[ncolor]
+proc mkgl() {local x
+	x = .025
+	$o1 = new Glyph()
+	if ($4 == 0) { // square
+		$o1.path.m(-x, -x).l(-x, x).l(x, x).l(x,-x).close
+	}else if ($4 == 1) { // triangle
+		$o1.path.m(-x, -x).l(0,x).l(x,-x).close
+	}else if ($4 == 2) { // circle (not a very fast shape)
+				// might be better off using a gif
+		ellipse_path($o1, x, x)
+	}
+	if ($3 == 0) {
+		$o1.s($2,1)
+	}else{
+		$o1.fill($2)
+	}
+}
+proc ellipse_path() {local p0, p1, p2, p3, p4, px0, px1, px2, px3, px4, rx, ry, x, y
+	x = 0  y = 0
+	rx = $2  ry = $3
+	// following from iv/src/lib/IV-Mac/canvas.cpp
+	p0 = 1.00000000
+	p1 = 0.89657547   // cos 30 * sqrt(1 + tan 15 * tan 15)
+	p2 = 0.70710678   // cos 45
+	p3 = 0.51763809   // cos 60 * sqrt(1 + tan 15 * tan 15)
+	p4 = 0.26794919   // tan 15
+	px0 = p0 * rx  py0 = p0 * ry
+	px1 = p1 * rx  py1 = p1 * ry
+	px2 = p2 * rx  py2 = p2 * ry
+	px3 = p3 * rx  py3 = p3 * ry
+	px4 = p4 * rx  py4 = p4 * ry
+
+	$o1.path()
+	$o1.m(x + rx, y)
+	$o1.curve(px2, y + py2, x + px0, y + py4, x + px1, y + py3)
+	$o1.curve(x, y + ry, x + px3, y + py1, x + px4, y + py0)
+	$o1.curve(x - px2, y + py2, x - px4, y + py0, x - px3, y + py1)
+	$o1.curve(x - rx, y, x - px1, y + py3, x - px0, y + py4)
+	$o1.curve(x - px2, y - py2, x - px0, y - py4, x - px1, y - py3)
+	$o1.curve(x, y - ry, x - px3, y - py1, x - px4, y - py0)
+	$o1.curve(x + px2, y - py2, x + px4, y - py0, x + px3, y - py1)
+	$o1.curve(x + rx, y, x + px1, y - py3, x + px0, y - py4)
+	$o1.close
+}
+
+for i=1,ncolor-1 {
+	mkgl(sq[i],i,0,0)  mkgl(SQ[i], i, 1,0)
+	mkgl(tri[i],i,0,1)  mkgl(TRI[i], i, 1,1)
+	mkgl(oh[i],i,0,2)  mkgl(OH[i], i, 1,2)
+}
+
+proc connecEx() {local numpost, numpre, numpresyn, x, y, sizemax, size, color, tt
+        sizemax = 10
+        //numpost = nEx
+        //numpre  = nEx
+        
+	numpost = 1
+	numpre = 1
+
+	numpresyn = nEx_Ex
+        // IF FIRST CALL OPEN GRAPH AND GET INITIAL Ws
+        if (connecEECount==0) {
+                plotconnecEx = new Graph(1)
+                plotconnecEx.size(0,numpost,-2,numpre)
+		//plotconnecEx.view(0,numpost,-2,numpre, 100,0,100,100)
+                //for (x=0;x<numpost;x=x+1) {
+                  x = 1
+		  for (y=0;y<numpresyn;y=y+1) {
+                      baseweights[x][y]=sExEx[x][y].gmaxAMPA
+                  }
+                //}
+        }                                                                               // end of connecEECount=0
+
+        plotconnecEx.erase_all()
+        //for (x=0;x<numpost;x=x+1) {
+        x = 1
+	   
+	   //connecEEselec[x][stim-1] = Ex[x].soma.Ca_CaSOMA
+           for (y=0;y<numpresyn;y=y+1) {
+                ypoint = sExEx[x][y].precell
+                size = (sExEx[x][y].gmaxAMPA-connecEEminW)/(connecEEmaxW-connecEEminW)*sizemax+1
+                if (sExEx[x][y].gmaxAMPA>=connecEEmaxW) { color = 2
+                } else { color = 3 }
+                plotconnecEx.glyph(sq[color], x+y*0.01,ypoint, size, size, 0)
+                size = (baseweights[x][y]-connecEEminW)/(connecEEmaxW-connecEEminW)*sizemax+1
+                plotconnecEx.glyph(SQ[3], x+y*0.01,ypoint, size, size, 0)
+           }
+        // plotconnecEx.beginline(1,2)
+        // plotconnecEx.line(x+0.1,0)
+        // plotconnecEx.line(x+0.1,Ex1[x].soma.Ca_CaSOMA)
+        //}
+
+
+        connecEECount=1
+        plotconnecEx.label(0.5,0.95,"Triang=Inh->Ex")
+        plotconnecEx.label(0.5,0.9,"Circ=Ex->Inh")
+
+        plotconnecEx.crosshair_action("ExConnections")
+
+
+}                                                                                               // END proc connecEE()
+
+///////////////// Ex->Inh Weights
+connecExInhCount = 0                                                      //counts # of times connecEE was called
+connecExInhminW  = 0
+connecExInhmaxW  = AmpaMaxExInh
+double baseweightsExInh[nInh][nEx_Inh]
+//double connecEEselec[nEx][numStim]
+proc connecExInh() {local numpost, numpre, numpresyn, x, y, sizemax, size, color
+        sizemax = 10
+        numpost = nInh
+        numpre  = nEx
+        numpresyn = nEx_Inh
+        // IF FIRST CALL OPEN GRAPH AND GET INITIAL Ws
+        if (connecExInhCount==0) {
+                for (x=0;x<numpost;x=x+1) {
+                        for (y=0;y<numpresyn;y=y+1) {
+                                baseweightsExInh[x][y]=sExInh[x][y].gmaxAMPA
+                        }
+                }
+        }                                                                               // end of connecEECount=0
+
+        for (x=0;x<numpost;x=x+1) {
+           //connecEEselec[x][stim-1] = Ex[x].soma.Ca_CaSOMA
+           for (y=0;y<numpresyn;y=y+1) {
+                        ypoint = sExInh[x][y].precell
+                        size = (baseweightsExInh[x][y]-connecExInhminW)/(connecExInhmaxW-connecExInhminW)*sizemax+1
+                        plotconnecEx.glyph(OH[4], x+y*0.01+0.2,ypoint,size, size,0)
+                        size = (sExInh[x][y].gmaxAMPA-connecExInhminW)/(connecExInhmaxW-connecExInhminW)*sizemax+1
+                        if (sExInh[x][y].gmaxAMPA>=connecExInhmaxW) { color = 2
+                        } else { color = 4 }
+                        plotconnecEx.glyph(oh[color], x+y*0.01+0.2,ypoint,size,size,0)
+           }
+        // plotconnecEx.beginline(1,2)
+        // plotconnecEx.line(x+0.1,0)
+        // plotconnecEx.line(x+0.1,Ex1[x].soma.Ca_CaSOMA)
+        }
+
+
+        connecExInhCount=1
+
+}                                                                                               // END proc connecEE()
+
+
+///////////////// Inh->Ex Weights
+connecInhExCount = 0                                                      //counts # of times connecEE was called
+connecInhExminW  = 0.002
+connecInhExmaxW  = GabaMax
+double baseweightsInhEx[nEx][nInh_Ex]
+proc connecInhEx() {local numpost, numpre, numpresyn, x, y, sizemax, size, color
+        sizemax = 10
+        numpost = nEx
+        numpre  = nInh
+        numpresyn = nInh_Ex
+        // IF FIRST CALL OPEN GRAPH AND GET INITIAL Ws
+        if (connecInhExCount==0) {
+                x = 1
+		//for (x=0;x<numpost;x=x+1) {
+                        for (y=0;y<numpresyn;y=y+1) {
+                                baseweightsInhEx[x][y]=sInhEx[x][y].gmaxGABA
+                        }
+                //}
+        }                                                                               // end of connecEECount=0
+
+        //for (x=0;x<numpost;x=x+1) {
+	x = 1
+           //connecEEselec[x][stim-1] = Ex[x].soma.Ca_CaSOMA
+           for (y=0;y<numpresyn;y=y+1) {
+                        ypoint = sInhEx[x][y].precell
+                        size = (baseweightsInhEx[x][y]-connecInhExminW)/(connecInhExmaxW-connecInhExminW)*sizemax+1
+                        plotconnecEx.glyph(TRI[6], x+y*0.01,ypoint+0.2,size,size,0)
+                        size = (sInhEx[x][y].gmaxGABA-connecInhExminW)/(connecInhExmaxW-connecInhExminW)*sizemax+1
+                        if (sInhEx[x][y].gmaxGABA>=connecInhExmaxW) { color = 2
+                        } else { color = 7 }
+                        plotconnecEx.glyph(tri[color],x+y*0.01,ypoint+0.2,size,size,0)
+           }
+        // plotconnecEx.beginline(1,2)
+        // plotconnecEx.line(x+0.1,0)
+        // plotconnecEx.line(x+0.1,Ex1[x].soma.Ca_CaSOMA)
+        //}
+
+
+        connecInhExCount=1
+
+}                                                                                               // END proc connecEE()
+
+
+////////////////////////////////////////////////////////////////////////////////////
+////////////////////   INTERACTIVE CONNECTIVITY   //////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////
+
+proc ExConnections() {local numpost, numpre, post, pre, numpresyn, x, y, sizemax, size, color
+
+    post = int($1)
+        plotconnecEx.beginline(2,2)
+        plotconnecEx.line(post,0)
+        plotconnecEx.line(post,-1)
+
+   numpresyn = nEx_Ex
+   for (y=0;y<numpresyn;y=y+1) {
+                ypoint = sExEx[post][y].precell
+        plotconnecEx.mark(0,ypoint,"S",8,5,1)
+        print "Post=",post,"Pre=",ypoint,"W=",sExEx[post][y].gmaxAMPA,"D=",sExEx[post][y].Delay
+   }
+   yscale = nEx/nInh
+   numpresyn = nInh_Ex
+   for (y=0;y<numpresyn;y=y+1) {
+                ypoint = sInhEx[post][y].precell
+        plotconnecEx.mark(post,ypoint*yscale,"T",6,4,1)
+   }
+
+}
+
+proc PrintConnections() {
+
+   post = int($1)
+   strdef dummystr
+   numpresyn = nEx_Ex
+   for (y=0;y<numpresyn;y=y+1) {
+        sprint(dummystr,"Post=%4d, ExPre(%3d)=%4d, W=%10.8f, D=%4.2f",post,y,sExEx[post][y].precell,sExEx[post][y].gmaxAMPA,sExEx[post][y].Delay)
+        print dummystr
+   }
+   
+}

@@ -1,0 +1,41 @@
+// Loads extra PANEL with commonly changed variables
+
+
+
+
+xpanel("Common_Parameters")
+xbutton("MULTI()", "MULTI()")
+xbutton("quit()", "quit()")
+
+xlabel("Synaptic Weights")
+xvalue("sExEx[ExINPUT][0].gmaxAMPA")
+xvalue("sExInh[0][0].gmaxAMPA")
+xvalue("sInhEx[ExINPUT][0].gmaxGABA")
+
+xlabel("Run Control")
+xvalue("numTrial")
+xvalue("StoreEveryTrial")
+
+xlabel("Network")
+xvalue("totEx_Ex")
+xvalue("totEx_Inh")
+xvalue("totInh_Ex")
+xvalue("AmpaMaxExEx")
+xvalue("AmpaMaxExInh")
+xvalue("GabaMax")
+xvalue("AMPANMDARATIO_EPlasSyn")
+xvalue("SetCaEx")
+xvalue("SetCaInh")
+//xvalue("ExNoise")
+//xvalue("InhNoise")
+
+xlabel("Plasticity")
+xvalue("ScaleExEx")
+xvalue("ScaleExInh")
+//xvalue("ScaleInhEx")
+xvalue("alfa_ScaleExEx")
+xvalue("alfa_ScaleExInh")
+//xvalue("STDP")
+//xvalue("STDPINH")
+
+xpanel(1100, 0)

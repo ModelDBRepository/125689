@@ -1,0 +1,278 @@
+// --- FILES -----------------------------------------------------------------
+
+objectvar fout
+fout = new File()
+objectvar fraster
+fraster = new File()
+objectvar foutW
+foutW = new File()
+
+fraster.wopen("Raster.dat")
+fout.wopen("Act.dat")
+foutW.wopen("W.dat")
+foutW.printf("ExINPUT= %d\n",ExINPUT)
+foutW.printf("InhINPUT= %d\n",InhINPUT)
+foutW.printf("nEx= %d\n",nEx)
+foutW.printf("nEx_Ex= %d\n",nEx_Ex)
+foutW.printf("nInh= %d\n",nInh)
+foutW.printf("nEx_Inh= %d\n",nEx_Inh)
+foutW.printf("nInh_Ex= %d\n",nInh_Ex)
+
+foutW.printf("AmpaMaxExEx= %f\n",AmpaMaxExEx)
+foutW.printf("AmpaMaxExInh= %f\n",AmpaMaxExInh)
+foutW.printf("AMPANMDARATIO_EPlasSyn= %f\n",AMPANMDARATIO_EPlasSyn)
+
+foutW.printf("totEx_Ex= %f\n",totEx_Ex)
+foutW.printf("totInh_Ex= %f\n",totInh_Ex)
+foutW.printf("totEx_Inh= %f\n",totEx_Inh)
+
+foutW.printf("SetCa_ExIAF= %d\n",Ex[0].soma.SetCa_ExIAF)
+foutW.printf("SetCa_InhIAF= %d\n",Inh[0].soma.SetCa_InhIAF)
+
+foutW.printf("sdW= %f\n",sdW)
+foutW.printf("ExNoise= %f\n",ExNoise)
+foutW.printf("InhNoise= %f\n",InhNoise)
+foutW.printf("seed= %f\n",seed)
+
+foutW.printf("ScaleExEx= %d\n",ScaleExEx)
+foutW.printf("ScaleExInh= %d\n",ScaleExInh)
+foutW.printf("ScaleInhEx= %d\n",ScaleInhEx)
+foutW.printf("STDP= %d\n",STDP)
+foutW.printf("STDPINH= %d\n",STDPINH)
+
+foutW.printf("gainLTP= %f\n",gainLTP_EPlasSyn)
+foutW.printf("gainLTD= %f\n",gainLTD_EPlasSyn)
+foutW.printf("tauLTP= %f\n",tauLTP_EPlasSyn)
+foutW.printf("tauLTD= %f\n",tauLTD_EPlasSyn)
+
+foutW.printf("gainLTP_IPlasSyn= %f\n",gainLTP_IPlasSyn)
+foutW.printf("gainLTD_IPlasSyn= %f\n",gainLTD_IPlasSyn)
+foutW.printf("tauLTP_IPlasSyn= %f\n",tauLTP_IPlasSyn)
+foutW.printf("tauLTD_IPlasSyn= %f\n",tauLTD_IPlasSyn)
+
+foutW.printf("StoreEveryTrial= %d\n",StoreEveryTrial)
+foutW.printf("numTrial= %d\n",numTrial)
+foutW.printf("CONNECT= 1\n")
+
+foutW.printf("STOP\n")
+
+//----- Write Connectivity to W file -----//
+
+///// Ex /////
+for (i=ExINPUT; i<nEx; i=i+1) {
+	for (j=0;j<nEx_Ex;j=j+1) {
+           foutW.printf("%5d \n",sExEx[i][j].precell)
+        }
+}
+foutW.printf("%5d \n",9999)
+for (i=ExINPUT;i<nEx;i=i+1) {
+	for (j=0;j<nInh_Ex;j=j+1) {
+           foutW.printf("%5d \n",sInhEx[i][j].precell)
+   }
+}
+foutW.printf("%5d \n",9999)
+///// Inh /////
+for (i=0;i<nInh;i=i+1) {
+	for (j=0;j<nEx_Inh;j=j+1) {
+		foutW.printf("%5d \n",sExInh[i][j].precell)
+    }
+}
+foutW.printf("%5d \n",9999)
+
+
+//----- PROCEDURE TO WRITE W FILES AUTOMATICALLY -----//
+
+proc StoreW() {                         //STORE PARAMETERS
+
+	for (i=ExINPUT; i<nEx; i=i+1) {
+		for (j=0;j<nEx_Ex;j=j+1) {
+			foutW.printf("%g \n",sExEx[i][j].gmaxAMPA)
+		}
+	}
+	for (i=i=ExINPUT; i<nEx; i=i+1) {
+        for (j=0;j<nInh_Ex;j=j+1) {
+           foutW.printf("%g \n",sInhEx[i][j].gmaxGABA)
+        }
+   }
+   for (i=0;i<nInh;i=i+1) {
+           for (j=0;j<nEx_Inh;j=j+1) {
+              foutW.printf("%g \n",sExInh[i][j].gmaxAMPA)
+           }
+   }
+   for (i=0;i<nEx;i=i+1) {
+       foutW.printf("%g \n",Ex[i].soma.AvgCa_ExIAF)
+   }
+   for (i=0;i<nInh;i=i+1) {
+       foutW.printf("%g \n",Inh[i].soma.AvgCa_InhIAF)
+   }
+
+}                                                       //end StoreParam
+
+//----- PROCEDURE TO WRITE ACTIVITY -----//
+
+proc StoreAct() {                               //STORE PARAMETERS
+   for (i=0;i<nEx;i=i+1) {
+           fout.printf("%d %d %f \n",trial,i,Ex[i].soma.Ca_ExIAF)
+   }
+}                                                       //end StoreParam
+
+//----- PROCEDURE TO WRITE W, FILE IS CALLED IN FUNCTION -----//
+objectvar writeparam
+writeparam = new File()
+proc SaveW() {                          //STORE PARAMETERS
+   writeparam.wopen($s1)
+   for (i=0;i<nEx;i=i+1) {
+        for (j=0;j<nEx_Ex;j=j+1) {
+           writeparam.printf("%g \n",sExEx[i][j].gmaxAMPA)
+        }
+   }
+   for (i=0;i<nEx;i=i+1) {
+        for (j=0;j<nInh_Ex;j=j+1) {
+           writeparam.printf("%g \n",sInhEx[i][j].gmaxGABA)
+        }
+   }
+   for (i=0;i<nInh;i=i+1) {
+        for (j=0;j<nEx_Inh;j=j+1) {
+           writeparam.printf("%g \n",sExInh[i][j].gmaxAMPA)
+        }
+   }
+
+   writeparam.close()
+}                                                       //end StoreParam
+
+//----- PROCEDURE TO READ W FILES -----//
+
+objectvar readparam
+readparam = new File()
+proc ReadW() {                          //STORE PARAMETERS
+   readparam.ropen($s1)
+   for (i=0;i<nEx;i=i+1) {
+           for (j=0;j<nEx_Ex;j=j+1) {
+              sExEx[i][j].gmaxAMPA = readparam.scanvar()
+              sExEx[i][j].gmaxNMDA=sExEx[i][j].gmaxAMPA*AMPANMDARATIO_EPlasSyn
+           }
+   }
+   for (i=0;i<nEx;i=i+1) {
+        for (j=0;j<nInh_Ex;j=j+1) {
+              sInhEx[i][j].gmaxGABA = readparam.scanvar()
+        }
+   }   
+   for (i=0;i<nInh;i=i+1) {
+           for (j=0;j<nEx_Inh;j=j+1) {
+              sExInh[i][j].gmaxAMPA = readparam.scanvar()
+              sExInh[i][j].gmaxNMDA=sExInh[i][j].gmaxAMPA*AMPANMDARATIO_EPlasSyn
+           }
+   }
+   for (i=0;i<nEx;i=i+1) {
+      Ex[i].soma.AvgCa_ExIAF = readparam.scanvar()
+   }
+   for (i=0;i<nInh;i=i+1) {
+      Inh[i].soma.AvgCa_InhIAF = readparam.scanvar()
+   }
+
+   readparam.close()
+}                                                       //end StoreParam
+
+
+//----- PROCEDURE TO WRITE CONNECTIVITY -----//
+
+objectvar fconnect
+fconnect = new File()
+proc WriteConnectivity() {                              //STORE PARAMETERS
+   fconnect.wopen("connectivity.dat")
+   ///// Ex /////
+   for (i=0;i<nEx;i=i+1) {
+        for (j=0;j<nEx_Ex;j=j+1) {
+           fconnect.printf("%5d %5d %7.2f %g\n",sExEx[i][j].precell,i,Ex[sExEx[i][j].precell].soma.Delay_EPlasSom,sExEx[i][j].gmaxAMPA)
+        }
+   }
+   fconnect.printf("%5d %5d %7.2f %g\n",999,999,999,999)
+   for (i=0;i<nEx;i=i+1) {
+        for (j=0;j<nInh_Ex;j=j+1) {
+           fconnect.printf("%5d %5d %7.2f %g\n",sInhEx[i][j].precell,i,Inh[sInhEx[i][j].precell].soma.Delay_IPlasSom,sInhEx[i][j].gmaxGABA)
+        }
+   }
+   fconnect.printf("%5d %5d %7.2f %g\n",999,999,999,999)
+   ///// Inh /////
+   for (i=0;i<nInh;i=i+1) {
+        for (j=0;j<nEx_Inh;j=j+1) {
+           fconnect.printf("%5d %5d %7.2f %g\n",sExInh[i][j].precell,i,Ex[sExInh[i][j].precell].soma.Delay_EPlasSom,sExInh[i][j].gmaxAMPA)
+        }
+   }
+   fconnect.printf("%5d %5d %7.2f %g\n",999,999,999,999)
+   for (i=0;i<nInh;i=i+1) {
+        for (j=0;j<nEx_Inh;j=j+1) {
+           fconnect.printf("%5d %5d %5d %g\n",ExInhPost[i][j],i,j,999)
+        }
+   }
+   
+   fconnect.printf("%5d %5d %7.2f %g\n",999,999,999,999) 
+   
+   fconnect.close()
+}                                                       //end StoreParam
+
+
+//----- PROCEDURE TO CLOSE OUTPUT FILES -----//
+proc CLOSEFILES() {
+   fout.close()
+   foutW.close()
+   fraster.close()
+
+}
+
+objectvar fall
+fall = new File()
+
+proc SAVEALLW() {
+   fall.wopen("allW.asc")
+
+   fall.printf("nEx= %d\n",nEx)
+   fall.printf("nInh= %d\n",nInh)
+   fall.printf("nEx_Ex= %d\n",nEx_Ex)
+   fall.printf("nEx_Inh= %d\n",nEx_Inh)
+   fall.printf("nInh_Ex= %d\n",nInh_Ex)
+   fall.printf("STOP\n")
+
+
+
+   for (i=0;i<nEx;i=i+1) {
+           for (j=0;j<nEx_Ex;j=j+1) {
+              fall.printf("%g \n",sExEx[i][j].gmaxAMPA)
+           }
+   }
+   for (i=0;i<nInh;i=i+1) {
+           for (j=0;j<nEx_Inh;j=j+1) {
+              fall.printf("%g \n",sExInh[i][j].gmaxAMPA)
+           }
+   }
+   for (i=0;i<nEx;i=i+1) {
+           for (j=0;j<nInh_Ex;j=j+1) {
+              fall.printf("%g \n",sInhEx[i][j].gmaxGABA)
+           }
+   }
+   fall.close()
+}
+
+
+//----- PROCEDURE TO READ INPUT (Spike Patterns) FILES -----//
+double SpikeTimes[9][9]
+objectvar inputfile 
+inputfile = new File()
+strdef  filename
+proc ReadInput() {				//STORE PARAMETERS
+   sprint(filename,"%s%d.spk",$s1,$2)
+   print "READING FROM ",filename
+   inputfile.ropen(filename)
+   
+   maxinputtime=inputfile.scanvar()
+   numinputs=inputfile.scanvar()
+   double SpikeTimes[numinputs][maxinputtime+1]
+   while (!inputfile.eof()) {
+	   time = inputfile.scanvar()
+	   cell = inputfile.scanvar()
+	   SpikeTimes[cell-1][time]=1
+	   //print "time=",time," cell=",cell
+   }
+   
+   inputfile.close()
+}							//end StoreParam

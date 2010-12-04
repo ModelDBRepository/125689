@@ -1,0 +1,108 @@
+/*--------------------------------------------------------------
+    TEMPLATE FILE
+        --------------------------------------------
+
+        . ONE COMPARTMENT (soma)
+
+        L = cell length, amount of current to fire a cell is directly proportional
+                to the area of the cell.
+--------------------------------------------------------------*/
+
+begintemplate INPUTSoma            // create a new template object...
+public soma //, dend
+create soma //,dend
+proc init() {
+   soma {
+	   Ra = 35			//*35        **1  ** = Carrie's						// Axial Resistivity
+	   nseg = 1
+	   diam = 10			//*10        **1                                // diameter in um: L and diam are used to calculate area
+	   L = 10			//*10        **1                                    // length in um: relevant because g_pas is in mho/cm2
+	   cm = 3			//*3         **0.1                                  // capacitance
+
+	   insert ExIAF                         // includes
+		   Thr_ExIAF = -45			//* -40		**-45	// -70
+		   ePAS_ExIAF = -65			//*-60      **-65   // -70
+		   gPAS_ExIAF = 0.0001		// time constant is 30 ms because cm = 3, 0.0001
+		   eOFF_ExIAF = -60			//* -60               //e_pas
+		   gAHPbar_ExIAF = 0.00007	//* 0.00007
+	   insert NOISE
+	   insert EPlasSom
+	   insert EtoIPlasSom
+
+  }
+  print "<< INPUTSoma >>"
+}
+endtemplate INPUTSoma
+
+
+
+begintemplate ExSoma            // create a new template object...
+public soma, dend
+create soma,dend
+proc init() {
+   soma {
+	   Ra = 35                                              // Axial Resistivity
+	   nseg = 1
+	   diam = 10                                            // diameter in um: L and diam are used to calculate area
+	   L = 10                                               // length in um: relevant because g_pas is in mho/cm2
+	   cm = 3                                               // capacitance
+
+	   insert ExIAF                         // includes
+		   Thr_ExIAF = -40			//* -40			// -70
+		   ePAS_ExIAF = -60         // -70  //Resting membrane potential
+		   gPAS_ExIAF = 0.0001		// time constant is 30 ms because cm = 3, 0.0001
+		   eOFF_ExIAF = -53			//* -60               //e_pas
+		   gAHPbar_ExIAF = 0.00035	//* 0.00007
+	   insert NOISE
+	   insert EPlasSom
+	   insert EtoIPlasSom
+
+  }
+  dend {
+	  //*Ra = 35
+      nseg = 10
+      diam = 0.5
+      L = 100
+      insert pas
+         e_pas = -60
+         g_pas = 0.0001
+         cm = 3
+  }
+  connect dend(0), soma(1)
+  print "<< ExSoma >>"
+}
+endtemplate ExSoma
+
+
+
+
+
+begintemplate InhSoma           // create a new template object...
+public soma
+create soma
+proc init() {
+   soma {
+	Ra = 35                                   // geometry
+	nseg = 1
+	diam = 10
+	L = 10                                       // such as surface = 1000 um2
+	cm = 1.5                                    // 3
+
+	insert InhIAF                     // includes
+		Thr_InhIAF = -50			//* -45
+		ePAS_InhIAF = -60         // -70
+		gPAS_InhIAF = 0.0001      // time constant is 30 ms because cm = 3, 0.0001
+		eOFF_InhIAF = -65         //e_pas
+		gAHPbar_InhIAF = 0.00002	//*0.0002
+		//tauAHP_InhIAF =	0.05			// IS NOT USED?? It was 0.05
+	insert NOISE
+	insert IPlasSom
+
+  }
+  print "<< InhSoma >>"
+}
+endtemplate InhSoma
+
+
+
+

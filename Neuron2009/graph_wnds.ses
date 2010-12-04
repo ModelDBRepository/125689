@@ -1,0 +1,33 @@
+objectvar save_window_, rvp_
+objectvar scene_vector_[5]
+objectvar ocbox_, ocbox_list_, scene_, scene_list_
+{ocbox_list_ = new List()  scene_list_ = new List()}
+{
+save_window_ = new Graph(0)
+save_window_.size(0,100,-80,300)
+scene_vector_[0] = save_window_
+{save_window_.view(0, -80, 100, 380, 706, -5, 300.6, 200.8)}
+graphList[0].append(save_window_)
+save_window_.save_name("graphList[0].")
+save_window_.addvar("Ex[0].soma.v", 1, 1, 0.8, 0.9, 2)
+save_window_.addexpr("Ex[1].soma.v+1*10", 3, 1, 0.8, 0.9, 2)
+}
+{
+save_window_ = new Graph(0)
+save_window_.size(0,1,-2,1)
+scene_vector_[4] = save_window_
+{save_window_.view(0, -2, 1, 3, 1122, -3, 300.6, 200.8)}
+save_window_.label(0.5, 0.95, "Triang=Inh->Ex", 2, 1, 0, 0, 1)
+save_window_.label(0.5, 0.9, "Circ=Ex->Inh", 2, 1, 0, 0, 1)
+}
+{
+save_window_ = new Graph(0)
+save_window_.size(0,100,-80,300)
+scene_vector_[3] = save_window_
+{save_window_.view(0, -80, 100, 380, 706, 331, 300.6, 200.8)}
+graphList[0].append(save_window_)
+save_window_.save_name("graphList[0].")
+save_window_.addvar("Inh[0].soma.v", 1, 1, 0.8, 0.9, 2)
+}
+objectvar scene_vector_[1]
+{doNotify()}
