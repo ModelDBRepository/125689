@@ -151,7 +151,7 @@ PROCEDURE release() { LOCAL q
   	   ampa = R1_1 * exptable (- Beta_1 * (t - (lastrelease + Cdur))) 
 	} 
 
-    SOLVE G_protein METHOD euler
+    SOLVE G_protein METHOD cnexp : see http://www.neuron.yale.edu/phpBB/viewtopic.php?f=28&t=592
 
 	VERBATIM
 	return 0;
