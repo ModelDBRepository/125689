@@ -36,7 +36,7 @@ ASSIGNED { i (nA) }
 
 BREAKPOINT {
 
-SOLVE dum       :has to be in a proc otherwise it fucks up
+SOLVE dum       :has to be in a proc otherwise error
 
 }
 
